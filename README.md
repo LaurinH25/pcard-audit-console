@@ -12,10 +12,11 @@ Two tabs:
 
 ## Protect your API key
 
-The key is read from the `ANTHROPIC_API_KEY` environment variable. It is never written
+The key is read from the `GEMINI_API_KEY` environment variable. It is never written
 to source and `.env` is listed in `.gitignore`. **Do not commit a key.** If one is ever
-pushed, revoke it in the Anthropic console immediately — rewriting Git history is not
-enough, because the key is already exposed in forks, caches and clones.
+pushed, revoke it in [Google AI Studio](https://aistudio.google.com/apikey) immediately —
+rewriting Git history is not enough, because the key is already exposed in forks, caches
+and clones.
 
 ## Run locally
 
@@ -53,16 +54,16 @@ Fly.io or any similar host. Set two environment variables in the host's dashboar
 
 | Variable | Value |
 |---|---|
-| `ANTHROPIC_API_KEY` | your key |
+| `GEMINI_API_KEY` | your key |
 | `PCARD_DB` | path to the database on the deployed filesystem |
 
-Optionally set `ANTHROPIC_MODEL` (defaults to `claude-sonnet-4-6`).
+Optionally set `GEMINI_MODEL` (defaults to `gemini-3.6-flash`).
 
 ## How the natural-language tab works
 
-The question goes to the Anthropic Messages API with a system prompt containing the
-table schema, a note that `TransactionDate` is text in `M/D/YYYY` format and will not
-sort correctly, and the OSU spending limits. The model returns SQL only.
+The question goes to the Google Gemini API (`generateContent`) with a system prompt
+containing the table schema, a note that `TransactionDate` is text in `M/D/YYYY` format
+and will not sort correctly, and the OSU spending limits. The model returns SQL only.
 
 Before anything runs, `validate_sql()` enforces:
 

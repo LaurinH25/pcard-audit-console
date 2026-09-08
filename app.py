@@ -5,7 +5,7 @@ Two capabilities:
   1. /api/ask     natural-language question -> SQL -> results
   2. /api/search  keyword search of Description or Vendor, by year
 
-The API key is read from the ANTHROPIC_API_KEY environment variable and is
+The API key is read from the GEMINI_API_KEY environment variable and is
 never written to source. See README.md.
 """
 
@@ -24,8 +24,8 @@ import requests
 from flask import Flask, jsonify, request, send_from_directory
 
 DB_PATH = os.environ.get("PCARD_DB", os.path.join(APP_DIR, "pcards.db"))
-API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+API_KEY = os.environ.get("GEMINI_API_KEY")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 ROW_CAP = 500
 
 app = Flask(__name__, static_folder="static", static_url_path="")
@@ -181,13 +181,13 @@ def ask():
     question = (body.get("question") or "").strip()
     if not question:
         return jsonify(error="Ask a question about the P-card data."), 400
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or API_KEY
+    api_key = os.environ.get("GEMINI_API_KEY") or API_KEY
     if not api_key:
         return jsonify(
-            error="No API key is configured. Put your Anthropic API key in .env (ANTHROPIC_API_KEY=sk-ant-...) and restart."
+            error="No API key is configured. Put your Google AI (Gemini) API key in .env (GEMINI_API_KEY=...) and restart."
         ), 503
 
-    model = os.environ.get("ANTHROPIC_MODEL", MODEL)
+    model = os.environ.get("GEMINI_MODEL", MODEL)
 
     system = (
         "You translate an internal auditor's question into one SQLite SELECT "
@@ -201,17 +201,15 @@ def ask():
 
     try:
         resp = requests.post(
-            "https://api.anthropic.com/v1/messages",
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
             headers={
                 "content-type": "application/json",
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
+                "x-goog-api-key": api_key,
             },
             json={
-                "model": model,
-                "max_tokens": 1000,
-                "system": system,
-                "messages": [{"role": "user", "content": question}],
+                "system_instruction": {"parts": [{"text": system}]},
+                "contents": [{"role": "user", "parts": [{"text": question}]}],
+                "generationConfig": {"maxOutputTokens": 1000, "temperature": 0},
             },
             timeout=60,
         )
@@ -221,9 +219,14 @@ def ask():
     if resp.status_code != 200:
         return jsonify(error=f"Language model returned {resp.status_code}."), 502
 
+    candidates = resp.json().get("candidates", [])
     text = "".join(
-        b.get("text", "") for b in resp.json().get("content", []) if b.get("type") == "text"
+        p.get("text", "")
+        for c in candidates
+        for p in c.get("content", {}).get("parts", [])
     )
+    if not text.strip():
+        return jsonify(error="The model returned no SQL. Try rephrasing the question."), 502
     sql = re.sub(r"^```(?:sql)?|```$", "", text.strip(), flags=re.M).strip()
 
     try:
