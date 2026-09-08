@@ -209,7 +209,10 @@ def ask():
             json={
                 "system_instruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": question}]}],
-                "generationConfig": {"maxOutputTokens": 1000, "temperature": 0},
+                "generationConfig": {
+                    "maxOutputTokens": 4096,
+                    "temperature": 0,
+                },
             },
             timeout=60,
         )
@@ -219,12 +222,18 @@ def ask():
     if resp.status_code != 200:
         return jsonify(error=f"Language model returned {resp.status_code}."), 502
 
-    candidates = resp.json().get("candidates", [])
+    payload = resp.json()
+    candidates = payload.get("candidates", [])
     text = "".join(
         p.get("text", "")
         for c in candidates
         for p in c.get("content", {}).get("parts", [])
     )
+    finish = candidates[0].get("finishReason") if candidates else None
+    if finish == "MAX_TOKENS":
+        return jsonify(
+            error="The model ran out of output budget before finishing the SQL. Try a shorter or simpler question."
+        ), 502
     if not text.strip():
         return jsonify(error="The model returned no SQL. Try rephrasing the question."), 502
     sql = re.sub(r"^```(?:sql)?|```$", "", text.strip(), flags=re.M).strip()
