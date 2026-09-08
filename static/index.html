@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P-Card Audit Console — Oklahoma State University</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#eef1f4; --surface:#fff; --ink:#1a2530; --muted:#5c6b7a;
+    --rule:#c9d3dc; --rule-soft:#e2e8ed; --flag:#c8500f; --flag-bg:#fdf1e8;
+    --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 var(--sans)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 64px}
+
+  header{padding:26px 0 0}
+  .masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px}
+  .corpus{margin:6px 0 20px;color:var(--muted);font-size:13px;font-family:var(--mono)}
+
+  /* tabs read as file dividers in a workpaper binder */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule)}
+  .tab{appearance:none;border:1px solid transparent;border-bottom:none;background:none;
+       font:500 14px/1 var(--sans);color:var(--muted);padding:11px 18px;cursor:pointer;
+       border-radius:3px 3px 0 0;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected=true]{background:var(--surface);border-color:var(--rule);color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--flag);outline-offset:-2px}
+
+  .panel{background:var(--surface);border:1px solid var(--rule);border-top:none;
+         padding:24px;border-radius:0 0 3px 3px}
+  [hidden]{display:none!important}
+
+  .lede{max-width:66ch;color:var(--muted);font-size:14px;margin:0 0 20px}
+  .lede strong{color:var(--ink);font-weight:500}
+  h2{font-size:15px;font-weight:600;margin:0 0 4px}
+  .steps{max-width:66ch;margin:0 0 22px;padding-left:18px;color:var(--muted);font-size:14px}
+  .steps li{margin:5px 0}
+
+  label{display:block;font-size:13px;font-weight:500;margin:0 0 5px}
+  input,select,textarea,button{font-family:inherit;font-size:14px}
+  input[type=text],select,textarea{width:100%;padding:9px 11px;border:1px solid var(--rule);
+        border-radius:3px;background:var(--surface);color:var(--ink)}
+  textarea{resize:vertical;min-height:76px;line-height:1.5}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--flag);outline-offset:-1px;border-color:var(--flag)}
+
+  .go{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:9px 20px;
+      border-radius:3px;font-weight:500;cursor:pointer}
+  .go:hover{background:#0f1a24}
+  .go:disabled{opacity:.5;cursor:default}
+
+  .search-block{border:1px solid var(--rule-soft);border-radius:3px;padding:18px;margin-bottom:16px}
+  .search-block h3{margin:0 0 3px;font-size:14px;font-weight:600}
+  .search-block p{margin:0 0 14px;color:var(--muted);font-size:13px;max-width:60ch}
+  .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .row .grow{flex:1 1 260px}
+  .row .narrow{flex:0 0 120px}
+
+  .chips{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--ground);border:1px solid var(--rule-soft);color:var(--muted);
+        padding:4px 10px;border-radius:12px;font-size:12px;cursor:pointer}
+  .chip:hover{border-color:var(--flag);color:var(--flag)}
+
+  .status{margin:18px 0 0;font-size:13px;color:var(--muted)}
+  .status.flagged{color:var(--flag);font-weight:500}
+  .err{margin:18px 0 0;padding:11px 13px;background:var(--flag-bg);
+       border-left:3px solid var(--flag);font-size:13px;border-radius:0 3px 3px 0}
+
+  .sql-shown{margin:18px 0 0;border:1px solid var(--rule-soft);border-radius:3px;overflow:hidden}
+  .sql-shown div{padding:6px 12px;background:var(--ground);font-size:12px;color:var(--muted);
+       border-bottom:1px solid var(--rule-soft)}
+  .sql-shown pre{margin:0;padding:12px;font:400 12.5px/1.6 var(--mono);white-space:pre-wrap}
+
+  .scroll{margin-top:14px;overflow:auto;max-height:62vh;border:1px solid var(--rule-soft);border-radius:3px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 11px;text-align:left;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+  th{position:sticky;top:0;background:var(--ground);font-weight:600;font-size:12px;
+     border-bottom:1px solid var(--rule);z-index:1}
+  td.num{font-family:var(--mono);text-align:right}
+  td.neg{color:var(--flag)}
+  tbody tr:hover{background:#f7f9fa}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  @media (max-width:640px){.panel{padding:16px}.row .narrow{flex:1 1 100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="masthead">
+      <h1>P-Card Audit Console</h1>
+      <span class="sub">Oklahoma State University · internal audit</span>
+    </div>
+    <p class="corpus" id="corpus">Loading transaction file…</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-ask" aria-controls="p-ask" aria-selected="true">Ask a question</button>
+    <button class="tab" role="tab" id="t-dash" aria-controls="p-dash" aria-selected="false">Prohibited purchases</button>
+  </div>
+
+  <!-- ------------------------------------------------ natural language -->
+  <section class="panel" id="p-ask" role="tabpanel" aria-labelledby="t-ask">
+    <h2>Ask a question in plain English</h2>
+    <p class="lede">Your question is translated into a SQLite query, run against the
+      transaction file, and returned with the query shown so you can verify what was
+      actually asked. <strong>Read the SQL before you rely on the numbers</strong> — a
+      question that reads clearly can still translate into the wrong filter.</p>
+
+    <label for="q">Your question</label>
+    <textarea id="q" placeholder="Which cardholders spent more than $50,000 in 2014?"></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="go" id="ask-go">Run question</button>
+    </div>
+
+    <div class="chips" id="ask-chips"></div>
+
+    <div id="ask-err" class="err" hidden></div>
+    <div id="ask-sql" class="sql-shown" hidden><div>Query that ran</div><pre></pre></div>
+    <p id="ask-status" class="status" hidden></p>
+    <div id="ask-table" class="scroll" hidden></div>
+  </section>
+
+  <!-- ------------------------------------------------------- dashboard -->
+  <section class="panel" id="p-dash" role="tabpanel" aria-labelledby="t-dash" hidden>
+    <h2>Search for prohibited purchases</h2>
+    <p class="lede">OSU prohibits P-Card use for alcohol, cash advances, decorations,
+      donations and sponsorships, gasoline, gift cards, insurance, late fees, postage,
+      moving expenses, personal purchases, individual memberships, salaries and benefits,
+      and service or incentive awards. Two search routes are offered because these
+      purchases hide in different places.</p>
+
+    <ol class="steps">
+      <li>Pick the year you are auditing.</li>
+      <li>Search the <strong>description</strong> for what was bought — this catches
+        line-item text such as “gift card”, and is the better route for alcohol,
+        awards and decorations.</li>
+      <li>Search the <strong>vendor</strong> for who was paid — this catches merchants
+        such as USPS or a liquor store even when the description is only
+        “GENERAL PURCHASE”, which is the case for two thirds of all rows.</li>
+      <li>Review the results, then pull the receipt and the business purpose recorded
+        in Works for anything you flag. A hit is a question, not a finding.</li>
+    </ol>
+
+    <div class="row" style="margin-bottom:18px">
+      <div class="narrow">
+        <label for="year">Year</label>
+        <select id="year"></select>
+      </div>
+    </div>
+
+    <div class="search-block">
+      <h3>Description search</h3>
+      <p>Searches the merchant’s line-item text for what was purchased.</p>
+      <div class="row">
+        <div class="grow">
+          <label for="kw-desc">Keyword in description</label>
+          <input type="text" id="kw-desc" placeholder="gift card">
+        </div>
+        <button class="go" id="go-desc">Search descriptions</button>
+      </div>
+      <div class="chips" id="chips-desc"></div>
+    </div>
+
+    <div class="search-block">
+      <h3>Vendor search</h3>
+      <p>Searches the merchant name for who was paid.</p>
+      <div class="row">
+        <div class="grow">
+          <label for="kw-vend">Keyword in vendor name</label>
+          <input type="text" id="kw-vend" placeholder="usps">
+        </div>
+        <button class="go" id="go-vend">Search vendors</button>
+      </div>
+      <div class="chips" id="chips-vend"></div>
+    </div>
+
+    <div id="dash-err" class="err" hidden></div>
+    <p id="dash-status" class="status" hidden></p>
+    <div id="dash-table" class="scroll" hidden></div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+
+/* ---------------------------------------------------------------- tabs */
+const tabs = [['t-ask','p-ask'],['t-dash','p-dash']];
+tabs.forEach(([t,p])=>{
+  $('#'+t).addEventListener('click',()=>{
+    tabs.forEach(([t2,p2])=>{
+      const on = t2===t;
+      $('#'+t2).setAttribute('aria-selected',on);
+      $('#'+p2).hidden = !on;
+    });
+  });
+});
+
+/* ------------------------------------------------------------- helpers */
+function table(cols,rows){
+  const head = cols.map(c=>`<th>${esc(c)}</th>`).join('');
+  const body = rows.map(r=>'<tr>'+r.map((v,i)=>{
+    if(typeof v === 'number'){
+      const neg = v < 0;
+      const s = /amount|total|spend|paid/i.test(cols[i]) ? money.format(v) : v;
+      return `<td class="num${neg?' neg':''}">${esc(String(s))}</td>`;
+    }
+    return `<td>${esc(v===null?'':String(v))}</td>`;
+  }).join('')+'</tr>').join('');
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function show(el,html){el.hidden=false;el.innerHTML=html;}
+function hide(...els){els.forEach(e=>e.hidden=true);}
+
+async function post(url,body){
+  const r = await fetch(url,{method:'POST',headers:{'content-type':'application/json'},
+                            body:JSON.stringify(body)});
+  return [r.ok, await r.json()];
+}
+
+/* ------------------------------------------------------------- corpus */
+fetch('/api/years').then(r=>r.json()).then(ys=>{
+  const total = ys.reduce((a,y)=>a+y.count,0);
+  const span = ys.map(y=>y.year).sort();
+  $('#corpus').textContent =
+    `${total.toLocaleString()} transactions · ${span[0]}–${span[span.length-1]}`;
+  $('#year').innerHTML = ys.map(y=>
+    `<option value="${y.year}"${y.year===2014?' selected':''}>${y.year}</option>`).join('');
+});
+
+/* ------------------------------------------------------- ask a question */
+const asks = [
+  'Which cardholders spent more than $50,000 in 2014?',
+  'Show every 2014 transaction over $5,000',
+  'Top 20 vendors by total 2014 spending',
+  'Which cardholders bought from liquor stores in 2014?'
+];
+$('#ask-chips').innerHTML = asks.map(a=>`<button class="chip">${a}</button>`).join('');
+$('#ask-chips').addEventListener('click',e=>{
+  if(e.target.classList.contains('chip')){ $('#q').value = e.target.textContent; $('#q').focus(); }
+});
+
+$('#ask-go').addEventListener('click', async ()=>{
+  const question = $('#q').value.trim();
+  hide($('#ask-err'),$('#ask-sql'),$('#ask-status'),$('#ask-table'));
+  if(!question){ show($('#ask-err'),'Type a question first.'); return; }
+
+  const btn = $('#ask-go'); btn.disabled = true; btn.textContent = 'Running…';
+  const [ok,d] = await post('/api/ask',{question});
+  btn.disabled = false; btn.textContent = 'Run question';
+
+  if(d.sql){ $('#ask-sql').hidden=false; $('#ask-sql pre').textContent = d.sql; }
+  if(!ok){ show($('#ask-err'), esc(d.error||'Something went wrong.')); return; }
+
+  const s = $('#ask-status'); s.hidden=false;
+  s.textContent = d.rows.length
+    ? `${d.rows.length} row${d.rows.length===1?'':'s'}${d.truncated?' (capped at 500)':''}`
+    : 'No rows matched. Try rephrasing, or widen the year.';
+  if(d.rows.length) show($('#ask-table'), table(d.columns,d.rows));
+});
+
+/* ---------------------------------------------------------- dashboard */
+const presets = {
+  desc:['gift card','gift certificate','alcohol','wine','beer','flowers','decoration',
+        'donation','sponsorship','membership','dues','award','plaque','late fee',
+        'insurance','postage','gasoline','fuel','moving'],
+  vend:['usps','post office','pitney','liquor','wine','spirits','atm','cash',
+        'florist','flowers','shell','exxon','conoco','country club','fitness',
+        'united way','red cross','moving','u-haul']
+};
+for(const [k,list] of Object.entries(presets)){
+  const box = $('#chips-'+k);
+  box.innerHTML = list.map(w=>`<button class="chip">${w}</button>`).join('');
+  box.addEventListener('click',e=>{
+    if(!e.target.classList.contains('chip')) return;
+    $(k==='desc'?'#kw-desc':'#kw-vend').value = e.target.textContent;
+    $(k==='desc'?'#go-desc':'#go-vend').click();
+  });
+}
+
+async function runSearch(field,kw){
+  hide($('#dash-err'),$('#dash-status'),$('#dash-table'));
+  if(!kw){ show($('#dash-err'),'Enter a keyword to search for.'); return; }
+  const [ok,d] = await post('/api/search',{field,keyword:kw,year:+$('#year').value});
+  if(!ok){ show($('#dash-err'), esc(d.error||'Search failed.')); return; }
+
+  const s = $('#dash-status'); s.hidden=false;
+  if(!d.rows.length){
+    s.classList.remove('flagged');
+    s.textContent = `No ${field.toLowerCase()} in ${$('#year').value} contains “${kw}”.`;
+    return;
+  }
+  s.classList.add('flagged');
+  s.textContent = `${d.rows.length}${d.truncated?'+':''} transaction`
+    + `${d.rows.length===1?'':'s'} matched “${kw}”, totalling ${money.format(d.total)}`
+    + ` — review each before treating it as an exception.`;
+  show($('#dash-table'), table(d.columns,d.rows));
+}
+$('#go-desc').addEventListener('click',()=>runSearch('Description',$('#kw-desc').value.trim()));
+$('#go-vend').addEventListener('click',()=>runSearch('Vendor',$('#kw-vend').value.trim()));
+$('#kw-desc').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go-desc').click();});
+$('#kw-vend').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go-vend').click();});
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))$('#ask-go').click();});
+</script>
+</body>
+</html>
