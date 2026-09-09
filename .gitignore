@@ -1,5 +1,6 @@
 .env
 *.db
+!pcards.db
 __pycache__/
 *.pyc
 venv/

@@ -34,18 +34,11 @@ Place `pcards.db` in the project root, or point `PCARD_DB` at it.
 
 ## The database and GitHub
 
-`pcards.db` is about 103 MB, which exceeds GitHub's 100 MB per-file limit. It is
-excluded by `.gitignore`. Pick one:
-
-1. **Git LFS** — `git lfs install && git lfs track "*.db"`, then commit `.gitattributes`.
-   Watch the free LFS bandwidth quota.
-2. **Host it separately** — put the file in cloud storage and download it at deploy time.
-   This is usually the simpler option.
-3. **Ship a subset** — export only the rows the console needs:
-
-   ```bash
-   sqlite3 pcards.db ".dump pcards" | sqlite3 pcards_2014.db   # then filter to Year=2014
-   ```
+`pcards.db` is about 98 MB. It's tracked with **Git LFS** (`git lfs track "*.db"`,
+committed via `.gitattributes`) instead of being stored directly in the repo's normal
+history. Cloning the repo pulls the real file automatically as long as Git LFS is
+installed (`git lfs install`) — no extra setup needed on the cloning end. Watch the
+free LFS storage/bandwidth quota (1 GiB/month) if the repo gets cloned a lot.
 
 ## Deploy
 
