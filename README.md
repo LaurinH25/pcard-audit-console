@@ -52,6 +52,31 @@ Fly.io or any similar host. Set two environment variables in the host's dashboar
 
 Optionally set `GEMINI_MODEL` (defaults to `gemini-3.6-flash`).
 
+## Static build (GitHub Pages, `docs/`)
+
+`docs/index.html` is a second, self-contained version of this app that runs entirely
+in the browser — no Flask, no server at all. This is the version GitHub Pages serves,
+since Pages can only host static files and cannot run Python.
+
+How it differs from the Flask app:
+
+- **Database** — queried client-side with [sql.js](https://sql.js.org/) (SQLite
+  compiled to WebAssembly). The page downloads `pcards.db` once per visit directly
+  from this repo's Git LFS storage via `media.githubusercontent.com` (the endpoint
+  that resolves LFS pointers to the real file; GitHub Pages itself and
+  `raw.githubusercontent.com` both serve only the ~130-byte LFS pointer, not the
+  database, so the static page fetches from the LFS media host explicitly).
+- **"Ask a question"** — since there's no server, there's nowhere to keep a shared
+  secret. Each visitor pastes their own Gemini key into the page; it's kept only in
+  that browser's `localStorage` and sent directly from the browser to Google's API.
+  It is never bundled into the page, never committed, and never seen by anyone but
+  that visitor. "Prohibited purchases" needs no key at all.
+- Both tabs otherwise behave identically to the Flask version — same schema prompt,
+  same SQL guardrails (`validateSql()` mirrors `validate_sql()`), same queries.
+
+To enable: repo **Settings → Pages → Source: Deploy from a branch → Branch: `main`,
+folder: `/docs`**. The live URL is `https://<username>.github.io/<repo>/`.
+
 ## How the natural-language tab works
 
 The question goes to the Google Gemini API (`generateContent`) with a system prompt
@@ -77,11 +102,13 @@ and in an audit context an unverified number is worse than no number.
 
 ```
 app.py              Flask backend: /api/ask, /api/search, /api/years
-static/index.html   single-page frontend
+static/index.html   single-page frontend (Flask version)
+docs/index.html     static, client-side version served by GitHub Pages
 requirements.txt    Flask, requests, gunicorn
 Procfile            gunicorn entry point for deployment
 .env.example        template — copy to .env, never commit .env
-.gitignore          excludes .env and *.db
+.gitignore          excludes .env and *.db (pcards.db itself is allow-listed back in)
+.gitattributes       tracks *.db with Git LFS
 ```
 
 ## A note on results

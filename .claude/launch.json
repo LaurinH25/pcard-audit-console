@@ -6,6 +6,12 @@
       "runtimeExecutable": ".venv\\Scripts\\python.exe",
       "runtimeArgs": ["app.py"],
       "port": 5000
+    },
+    {
+      "name": "pcard-static-pages",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "docs"],
+      "port": 8080
     }
   ]
 }

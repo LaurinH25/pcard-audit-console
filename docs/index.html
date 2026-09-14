@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P-Card Audit Console — Oklahoma State University</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#eef1f4; --surface:#fff; --ink:#1a2530; --muted:#5c6b7a;
+    --rule:#c9d3dc; --rule-soft:#e2e8ed; --flag:#c8500f; --flag-bg:#fdf1e8;
+    --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 var(--sans)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 64px}
+
+  header{padding:26px 0 0}
+  .masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px}
+  .corpus{margin:6px 0 4px;color:var(--muted);font-size:13px;font-family:var(--mono)}
+  .staticnote{margin:0 0 20px;color:var(--muted);font-size:12px;max-width:70ch}
+  .staticnote a{color:var(--muted)}
+
+  /* tabs read as file dividers in a workpaper binder */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule)}
+  .tab{appearance:none;border:1px solid transparent;border-bottom:none;background:none;
+       font:500 14px/1 var(--sans);color:var(--muted);padding:11px 18px;cursor:pointer;
+       border-radius:3px 3px 0 0;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected=true]{background:var(--surface);border-color:var(--rule);color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--flag);outline-offset:-2px}
+
+  .panel{background:var(--surface);border:1px solid var(--rule);border-top:none;
+         padding:24px;border-radius:0 0 3px 3px}
+  [hidden]{display:none!important}
+
+  .lede{max-width:66ch;color:var(--muted);font-size:14px;margin:0 0 20px}
+  .lede strong{color:var(--ink);font-weight:500}
+  h2{font-size:15px;font-weight:600;margin:0 0 4px}
+  .steps{max-width:66ch;margin:0 0 22px;padding-left:18px;color:var(--muted);font-size:14px}
+  .steps li{margin:5px 0}
+
+  label{display:block;font-size:13px;font-weight:500;margin:0 0 5px}
+  input,select,textarea,button{font-family:inherit;font-size:14px}
+  input[type=text],input[type=password],select,textarea{width:100%;padding:9px 11px;border:1px solid var(--rule);
+        border-radius:3px;background:var(--surface);color:var(--ink)}
+  textarea{resize:vertical;min-height:76px;line-height:1.5}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--flag);outline-offset:-1px;border-color:var(--flag)}
+
+  .go{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:9px 20px;
+      border-radius:3px;font-weight:500;cursor:pointer}
+  .go:hover{background:#0f1a24}
+  .go:disabled{opacity:.5;cursor:default}
+
+  .key-block{border:1px solid var(--rule-soft);border-radius:3px;padding:14px 16px;margin:0 0 20px;background:var(--ground)}
+  .key-block p{margin:0 0 10px;color:var(--muted);font-size:12.5px;max-width:64ch}
+  .key-row{display:flex;gap:10px;align-items:center}
+  .key-row input{flex:1}
+  .linklike{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;font-size:12.5px}
+
+  .search-block{border:1px solid var(--rule-soft);border-radius:3px;padding:18px;margin-bottom:16px}
+  .search-block h3{margin:0 0 3px;font-size:14px;font-weight:600}
+  .search-block p{margin:0 0 14px;color:var(--muted);font-size:13px;max-width:60ch}
+  .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .row .grow{flex:1 1 260px}
+  .row .narrow{flex:0 0 120px}
+
+  .chips{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--ground);border:1px solid var(--rule-soft);color:var(--muted);
+        padding:4px 10px;border-radius:12px;font-size:12px;cursor:pointer}
+  .chip:hover{border-color:var(--flag);color:var(--flag)}
+
+  .status{margin:18px 0 0;font-size:13px;color:var(--muted)}
+  .status.flagged{color:var(--flag);font-weight:500}
+  .err{margin:18px 0 0;padding:11px 13px;background:var(--flag-bg);
+       border-left:3px solid var(--flag);font-size:13px;border-radius:0 3px 3px 0}
+
+  .sql-shown{margin:18px 0 0;border:1px solid var(--rule-soft);border-radius:3px;overflow:hidden}
+  .sql-shown div{padding:6px 12px;background:var(--ground);font-size:12px;color:var(--muted);
+       border-bottom:1px solid var(--rule-soft)}
+  .sql-shown pre{margin:0;padding:12px;font:400 12.5px/1.6 var(--mono);white-space:pre-wrap}
+
+  .scroll{margin-top:14px;overflow:auto;max-height:62vh;border:1px solid var(--rule-soft);border-radius:3px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 11px;text-align:left;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+  th{position:sticky;top:0;background:var(--ground);font-weight:600;font-size:12px;
+     border-bottom:1px solid var(--rule);z-index:1}
+  td.num{font-family:var(--mono);text-align:right}
+  td.neg{color:var(--flag)}
+  tbody tr:hover{background:#f7f9fa}
+
+  .loadbar{margin-top:6px;height:4px;background:var(--rule-soft);border-radius:2px;overflow:hidden;max-width:320px}
+  .loadbar div{height:100%;background:var(--flag);width:0%;transition:width .15s}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  @media (max-width:640px){.panel{padding:16px}.row .narrow{flex:1 1 100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="masthead">
+      <h1>P-Card Audit Console</h1>
+      <span class="sub">Oklahoma State University · internal audit</span>
+    </div>
+    <p class="corpus" id="corpus">Downloading transaction file…</p>
+    <div class="loadbar" id="loadbar" hidden><div id="loadbar-fill"></div></div>
+    <p class="staticnote">Static build — runs entirely in your browser (SQLite via
+      <a href="https://sql.js.org/" target="_blank" rel="noopener">sql.js</a>, no server).
+      The transaction database downloads once per visit (~98 MB) directly from this
+      repository's Git LFS storage.</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-ask" aria-controls="p-ask" aria-selected="true">Ask a question</button>
+    <button class="tab" role="tab" id="t-dash" aria-controls="p-dash" aria-selected="false">Prohibited purchases</button>
+  </div>
+
+  <!-- ------------------------------------------------ natural language -->
+  <section class="panel" id="p-ask" role="tabpanel" aria-labelledby="t-ask">
+    <h2>Ask a question in plain English</h2>
+    <p class="lede">Your question is translated into a SQLite query, run against the
+      transaction file, and returned with the query shown so you can verify what was
+      actually asked. <strong>Read the SQL before you rely on the numbers</strong> — a
+      question that reads clearly can still translate into the wrong filter.</p>
+
+    <div class="key-block">
+      <p>This runs entirely in your browser, so there's no server to hold a shared API
+        key. Paste your own <strong>Google AI (Gemini)</strong> key to use this tab —
+        get a free one at
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+        It's saved only in this browser's local storage and sent directly to Google,
+        never to any server of ours.</p>
+      <div class="key-row">
+        <input type="password" id="gemini-key" placeholder="Paste your Gemini API key">
+        <button class="linklike" id="key-clear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <label for="q">Your question</label>
+    <textarea id="q" placeholder="Which cardholders spent more than $50,000 in 2014?"></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="go" id="ask-go" disabled>Run question</button>
+    </div>
+
+    <div class="chips" id="ask-chips"></div>
+
+    <div id="ask-err" class="err" hidden></div>
+    <div id="ask-sql" class="sql-shown" hidden><div>Query that ran</div><pre></pre></div>
+    <p id="ask-status" class="status" hidden></p>
+    <div id="ask-table" class="scroll" hidden></div>
+  </section>
+
+  <!-- ------------------------------------------------------- dashboard -->
+  <section class="panel" id="p-dash" role="tabpanel" aria-labelledby="t-dash" hidden>
+    <h2>Search for prohibited purchases</h2>
+    <p class="lede">OSU prohibits P-Card use for alcohol, cash advances, decorations,
+      donations and sponsorships, gasoline, gift cards, insurance, late fees, postage,
+      moving expenses, personal purchases, individual memberships, salaries and benefits,
+      and service or incentive awards. Two search routes are offered because these
+      purchases hide in different places.</p>
+
+    <ol class="steps">
+      <li>Pick the year you are auditing.</li>
+      <li>Search the <strong>description</strong> for what was bought — this catches
+        line-item text such as “gift card”, and is the better route for alcohol,
+        awards and decorations.</li>
+      <li>Search the <strong>vendor</strong> for who was paid — this catches merchants
+        such as USPS or a liquor store even when the description is only
+        “GENERAL PURCHASE”, which is the case for two thirds of all rows.</li>
+      <li>Review the results, then pull the receipt and the business purpose recorded
+        in Works for anything you flag. A hit is a question, not a finding.</li>
+    </ol>
+
+    <div class="row" style="margin-bottom:18px">
+      <div class="narrow">
+        <label for="year">Year</label>
+        <select id="year" disabled></select>
+      </div>
+    </div>
+
+    <div class="search-block">
+      <h3>Description search</h3>
+      <p>Searches the merchant’s line-item text for what was purchased.</p>
+      <div class="row">
+        <div class="grow">
+          <label for="kw-desc">Keyword in description</label>
+          <input type="text" id="kw-desc" placeholder="gift card">
+        </div>
+        <button class="go" id="go-desc" disabled>Search descriptions</button>
+      </div>
+      <div class="chips" id="chips-desc"></div>
+    </div>
+
+    <div class="search-block">
+      <h3>Vendor search</h3>
+      <p>Searches the merchant name for who was paid.</p>
+      <div class="row">
+        <div class="grow">
+          <label for="kw-vend">Keyword in vendor name</label>
+          <input type="text" id="kw-vend" placeholder="usps">
+        </div>
+        <button class="go" id="go-vend" disabled>Search vendors</button>
+      </div>
+      <div class="chips" id="chips-vend"></div>
+    </div>
+
+    <div id="dash-err" class="err" hidden></div>
+    <p id="dash-status" class="status" hidden></p>
+    <div id="dash-table" class="scroll" hidden></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.2/sql-wasm.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const money = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+
+/* ---------------------------------------------------------------- tabs */
+const tabs = [['t-ask','p-ask'],['t-dash','p-dash']];
+tabs.forEach(([t,p])=>{
+  $('#'+t).addEventListener('click',()=>{
+    tabs.forEach(([t2,p2])=>{
+      const on = t2===t;
+      $('#'+t2).setAttribute('aria-selected',on);
+      $('#'+p2).hidden = !on;
+    });
+  });
+});
+
+/* ------------------------------------------------------------- helpers */
+function table(cols,rows){
+  const head = cols.map(c=>`<th>${esc(c)}</th>`).join('');
+  const body = rows.map(r=>'<tr>'+r.map((v,i)=>{
+    if(typeof v === 'number'){
+      const neg = v < 0;
+      const s = /amount|total|spend|paid/i.test(cols[i]) ? money.format(v) : v;
+      return `<td class="num${neg?' neg':''}">${esc(String(s))}</td>`;
+    }
+    return `<td>${esc(v===null?'':String(v))}</td>`;
+  }).join('')+'</tr>').join('');
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function show(el,html){el.hidden=false;el.innerHTML=html;}
+function hide(...els){els.forEach(e=>e.hidden=true);}
+
+/* --------------------------------------------------------- database (client-side) */
+const LFS_DB_URL = 'https://media.githubusercontent.com/media/LaurinH25/pcard-audit-console/main/pcards.db';
+const SQLJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.2/';
+const ROW_CAP = 500;
+let db;
+
+function query(sql, params){
+  const stmt = db.prepare(sql);
+  if(params) stmt.bind(params);
+  const cols = stmt.getColumnNames();
+  const rows = [];
+  while(stmt.step()) rows.push(stmt.get());
+  stmt.free();
+  return {cols, rows};
+}
+
+async function fetchWithProgress(url, onProgress){
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error(`Could not download the database (HTTP ${resp.status}).`);
+  const total = +resp.headers.get('content-length') || 0;
+  if(!resp.body || !total) return new Uint8Array(await resp.arrayBuffer());
+  const reader = resp.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    chunks.push(value);
+    received += value.length;
+    onProgress(received, total);
+  }
+  const buf = new Uint8Array(received);
+  let offset = 0;
+  for(const c of chunks){ buf.set(c, offset); offset += c.length; }
+  return buf;
+}
+
+async function boot(){
+  try{
+    const [SQL, bytes] = await Promise.all([
+      initSqlJs({ locateFile: f => SQLJS_CDN + f }),
+      fetchWithProgress(LFS_DB_URL, (got,total)=>{
+        const pct = Math.round(got/total*100);
+        $('#loadbar').hidden = false;
+        $('#loadbar-fill').style.width = pct+'%';
+        $('#corpus').textContent = `Downloading transaction file… ${pct}% (${(got/1e6).toFixed(0)} / ${(total/1e6).toFixed(0)} MB)`;
+      })
+    ]);
+    db = new SQL.Database(bytes);
+    $('#loadbar').hidden = true;
+
+    const {rows} = query('SELECT Year, COUNT(*) n FROM pcards GROUP BY Year ORDER BY Year DESC');
+    const total = rows.reduce((a,r)=>a+r[1],0);
+    const years = rows.map(r=>r[0]).sort();
+    $('#corpus').textContent = `${total.toLocaleString()} transactions · ${years[0]}–${years[years.length-1]}`;
+    $('#year').innerHTML = rows.map(r=>r[0]).sort((a,b)=>b-a).map(y=>
+      `<option value="${y}"${y===2014?' selected':''}>${y}</option>`).join('');
+
+    $('#year').disabled = false;
+    $('#go-desc').disabled = false;
+    $('#go-vend').disabled = false;
+    updateAskButton();
+  }catch(err){
+    $('#loadbar').hidden = true;
+    $('#corpus').textContent = 'Failed to load the transaction database.';
+    show($('#dash-err'), esc(`Could not load pcards.db: ${err.message}`));
+    $('#dash-err').hidden = false;
+  }
+}
+boot();
+
+/* ------------------------------------------------------- ask a question */
+const asks = [
+  'Which cardholders spent more than $50,000 in 2014?',
+  'Show every 2014 transaction over $5,000',
+  'Top 20 vendors by total 2014 spending',
+  'Which cardholders bought from liquor stores in 2014?'
+];
+$('#ask-chips').innerHTML = asks.map(a=>`<button class="chip">${a}</button>`).join('');
+$('#ask-chips').addEventListener('click',e=>{
+  if(e.target.classList.contains('chip')){ $('#q').value = e.target.textContent; $('#q').focus(); }
+});
+
+const KEY_STORAGE = 'pcard-gemini-key';
+try{ $('#gemini-key').value = localStorage.getItem(KEY_STORAGE) || ''; }catch(e){}
+function updateAskButton(){
+  $('#ask-go').disabled = !db || !$('#gemini-key').value.trim();
+}
+$('#gemini-key').addEventListener('input', ()=>{
+  try{ localStorage.setItem(KEY_STORAGE, $('#gemini-key').value.trim()); }catch(e){}
+  updateAskButton();
+});
+$('#key-clear').addEventListener('click', ()=>{
+  $('#gemini-key').value = '';
+  try{ localStorage.removeItem(KEY_STORAGE); }catch(e){}
+  updateAskButton();
+});
+
+const SCHEMA = `Table: pcards
+  Year                   INTEGER  calendar year of the transaction
+  Month                  INTEGER  1-12
+  FullName               TEXT     cardholder, e.g. 'Employee 51914657'
+  ID                     INTEGER  row id within the cardholder's set
+  AgencyNumber           INTEGER  always 1000
+  AgencyName             TEXT     always 'OKLAHOMA STATE UNIVERSITY'
+  CardholderLastName     TEXT
+  CardholderFirstInitial TEXT
+  Description            TEXT     merchant line-item text, often 'GENERAL PURCHASE'
+  Amount                 REAL     positive = charge, negative = credit/return
+  Vendor                 TEXT     merchant name
+  TransactionDate        TEXT     'M/D/YYYY 0:00:00' -- does NOT sort as text
+  PostedDate             TEXT     'M/D/YYYY 0:00:00'
+  MCC                    TEXT     merchant category code description
+
+Rows: 489,178 covering 2010-2014. 2,021 cardholders, 17,513 vendors.`;
+
+const DATE_HINT = `TransactionDate is text in M/D/YYYY format and will not sort correctly.
+To sort or compare dates, build an ISO string:
+  printf('%04d-%02d-%02d',
+      CAST(substr(TransactionDate, instr(TransactionDate,' ')-4, 4) AS INTEGER),
+      CAST(substr(TransactionDate, 1, instr(TransactionDate,'/')-1) AS INTEGER),
+      CAST(substr(TransactionDate, instr(TransactionDate,'/')+1,
+           instr(substr(TransactionDate, instr(TransactionDate,'/')+1),'/')-1) AS INTEGER))
+The Year and Month columns already match TransactionDate, so prefer
+\`WHERE Year = 2014\` over parsing the date.`;
+
+const CONTROLS = `Relevant OSU P-Card limits: $50,000 per cycle credit limit, $5,000 single
+transaction limit, $10,000 monthly limit without written justification.
+Splitting a purchase to evade the $5,000 limit is prohibited.`;
+
+const FORBIDDEN = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|ATTACH|DETACH|PRAGMA|VACUUM|REINDEX|GRANT|COMMIT|BEGIN)\b/i;
+const GEMINI_MODEL = 'gemini-3.6-flash';
+
+function validateSql(sql){
+  sql = sql.trim().replace(/;+\s*$/,'').trim();
+  if(!sql) throw new Error('The model returned an empty query.');
+  if(sql.includes(';')) throw new Error('Only one statement can run at a time.');
+  if(FORBIDDEN.test(sql)) throw new Error('Only SELECT queries are allowed in this console.');
+  if(!/^\s*(SELECT|WITH)\b/i.test(sql)) throw new Error('The query must start with SELECT or WITH.');
+  if(!/\bLIMIT\b/i.test(sql)) sql += ` LIMIT ${ROW_CAP}`;
+  return sql;
+}
+
+async function askGemini(question, apiKey){
+  const system = "You translate an internal auditor's question into one SQLite SELECT "
+    + "statement against the P-card transaction table below. Reply with the "
+    + "SQL only: no prose, no markdown fences, no trailing semicolon.\n"
+    + `${SCHEMA}\n${DATE_HINT}\n${CONTROLS}\n`
+    + "Rules: read-only SELECT or WITH only. Always include a LIMIT of 500 "
+    + "or fewer. Round money with ROUND(x, 2). If the question names no "
+    + "year, filter to Year = 2014.";
+
+  let resp;
+  try{
+    resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+      method:'POST',
+      headers:{'content-type':'application/json','x-goog-api-key':apiKey},
+      body: JSON.stringify({
+        system_instruction:{parts:[{text:system}]},
+        contents:[{role:'user', parts:[{text:question}]}],
+        generationConfig:{maxOutputTokens:4096, temperature:0}
+      })
+    });
+  }catch(e){
+    throw new Error('Could not reach the language model. Try again.');
+  }
+  if(!resp.ok){
+    throw new Error(`Language model returned ${resp.status}.`);
+  }
+  const payload = await resp.json();
+  const candidates = payload.candidates || [];
+  const text = candidates.flatMap(c=>(c.content && c.content.parts) || []).map(p=>p.text||'').join('');
+  const finish = candidates[0] && candidates[0].finishReason;
+  if(finish === 'MAX_TOKENS'){
+    throw new Error('The model ran out of output budget before finishing the SQL. Try a shorter or simpler question.');
+  }
+  if(!text.trim()) throw new Error('The model returned no SQL. Try rephrasing the question.');
+  let sql = text.trim().replace(/^```(?:sql)?/i,'').replace(/```\s*$/,'').trim();
+  return validateSql(sql);
+}
+
+$('#ask-go').addEventListener('click', async ()=>{
+  const question = $('#q').value.trim();
+  const apiKey = $('#gemini-key').value.trim();
+  hide($('#ask-err'),$('#ask-sql'),$('#ask-status'),$('#ask-table'));
+  if(!question){ show($('#ask-err'),'Type a question first.'); return; }
+  if(!apiKey){ show($('#ask-err'),'Paste your Gemini API key first.'); return; }
+
+  const btn = $('#ask-go'); btn.disabled = true; btn.textContent = 'Running…';
+  let sql;
+  try{
+    sql = await askGemini(question, apiKey);
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Run question';
+    show($('#ask-err'), esc(err.message));
+    return;
+  }
+  $('#ask-sql').hidden = false; $('#ask-sql pre').textContent = sql;
+
+  let cols, rows;
+  try{
+    ({cols, rows} = query(sql));
+    rows = rows.slice(0, ROW_CAP);
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Run question';
+    show($('#ask-err'), esc(`The generated query did not run: ${err.message}. Try rephrasing.`));
+    return;
+  }
+  btn.disabled = false; btn.textContent = 'Run question';
+
+  const s = $('#ask-status'); s.hidden = false;
+  const truncated = rows.length >= ROW_CAP;
+  s.textContent = rows.length
+    ? `${rows.length} row${rows.length===1?'':'s'}${truncated?' (capped at 500)':''}`
+    : 'No rows matched. Try rephrasing, or widen the year.';
+  if(rows.length) show($('#ask-table'), table(cols, rows));
+});
+
+/* ---------------------------------------------------------- dashboard */
+const presets = {
+  desc:['gift card','gift certificate','alcohol','wine','beer','flowers','decoration',
+        'donation','sponsorship','membership','dues','award','plaque','late fee',
+        'insurance','postage','gasoline','fuel','moving'],
+  vend:['usps','post office','pitney','liquor','wine','spirits','atm','cash',
+        'florist','flowers','shell','exxon','conoco','country club','fitness',
+        'united way','red cross','moving','u-haul']
+};
+for(const [k,list] of Object.entries(presets)){
+  const box = $('#chips-'+k);
+  box.innerHTML = list.map(w=>`<button class="chip">${w}</button>`).join('');
+  box.addEventListener('click',e=>{
+    if(!e.target.classList.contains('chip')) return;
+    $(k==='desc'?'#kw-desc':'#kw-vend').value = e.target.textContent;
+    $(k==='desc'?'#go-desc':'#go-vend').click();
+  });
+}
+
+function runSearch(field, kw){
+  hide($('#dash-err'),$('#dash-status'),$('#dash-table'));
+  if(!kw){ show($('#dash-err'),'Enter a keyword to search for.'); return; }
+  const year = +$('#year').value;
+  const sql = `SELECT TransactionDate, PostedDate, FullName, Vendor, Description, `
+    + `Amount, MCC FROM pcards WHERE Year = ? AND UPPER(${field}) LIKE ? `
+    + `ORDER BY Amount DESC LIMIT ${ROW_CAP}`;
+  let cols, rows;
+  try{
+    ({cols, rows} = query(sql, [year, `%${kw.toUpperCase()}%`]));
+  }catch(err){
+    show($('#dash-err'), esc(`Search failed: ${err.message}`));
+    return;
+  }
+  const amtIdx = cols.indexOf('Amount');
+  const total = rows.reduce((a,r)=>a+r[amtIdx],0);
+
+  const s = $('#dash-status'); s.hidden = false;
+  if(!rows.length){
+    s.classList.remove('flagged');
+    s.textContent = `No ${field.toLowerCase()} in ${year} contains “${kw}”.`;
+    return;
+  }
+  s.classList.add('flagged');
+  const truncated = rows.length >= ROW_CAP;
+  s.textContent = `${rows.length}${truncated?'+':''} transaction`
+    + `${rows.length===1?'':'s'} matched “${kw}”, totalling ${money.format(Math.round(total*100)/100)}`
+    + ` — review each before treating it as an exception.`;
+  show($('#dash-table'), table(cols, rows));
+}
+$('#go-desc').addEventListener('click',()=>runSearch('Description',$('#kw-desc').value.trim()));
+$('#go-vend').addEventListener('click',()=>runSearch('Vendor',$('#kw-vend').value.trim()));
+$('#kw-desc').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go-desc').click();});
+$('#kw-vend').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go-vend').click();});
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))$('#ask-go').click();});
+</script>
+</body>
+</html>
