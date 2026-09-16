@@ -77,6 +77,38 @@ How it differs from the Flask app:
 To enable: repo **Settings → Pages → Source: Deploy from a branch → Branch: `main`,
 folder: `/docs`**. The live URL is `https://<username>.github.io/<repo>/`.
 
+## Streamlit build (`streamlit_app/`, one shared key for every visitor)
+
+`streamlit_app/app.py` is a third version: a full Python app (same schema, same
+`validate_sql()` guardrails, same Gemini call as the Flask app) running on
+[Streamlit Community Cloud](https://streamlit.io/cloud). Unlike the GitHub Pages
+build, the Gemini key lives server-side here — in Streamlit's secrets manager — so
+any visitor can use both tabs immediately with no key of their own.
+
+To deploy: on [share.streamlit.io](https://share.streamlit.io), create an app from
+this repo with **Main file path: `streamlit_app/app.py`**. Streamlit resolves the
+Git-LFS-tracked `pcards.db` automatically — no extra config needed. Then, in the
+app's **Settings → Secrets**, paste:
+
+```toml
+GEMINI_API_KEY = "your key"
+GEMINI_MODEL = "gemini-3.6-flash"   # optional
+```
+
+For local testing, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
+(gitignored, never commit it) — or just reuse the same `.env` the Flask app uses,
+which `streamlit_app/app.py` also reads as a fallback. Run with:
+
+```bash
+python3 -m venv streamlit_app/.venv && source streamlit_app/.venv/bin/activate
+pip install -r streamlit_app/requirements.txt
+streamlit run streamlit_app/app.py     # http://localhost:8501
+```
+
+`streamlit_app/requirements.txt` is separate from the root `requirements.txt` (Flask
+app) — Streamlit Community Cloud looks for a requirements file next to the entrypoint
+script first, so each build only installs what it actually needs.
+
 ## How the natural-language tab works
 
 The question goes to the Google Gemini API (`generateContent`) with a system prompt
@@ -101,14 +133,17 @@ and in an audit context an unverified number is worse than no number.
 ## Files
 
 ```
-app.py              Flask backend: /api/ask, /api/search, /api/years
-static/index.html   single-page frontend (Flask version)
-docs/index.html     static, client-side version served by GitHub Pages
-requirements.txt    Flask, requests, gunicorn
-Procfile            gunicorn entry point for deployment
-.env.example        template — copy to .env, never commit .env
-.gitignore          excludes .env and *.db (pcards.db itself is allow-listed back in)
-.gitattributes       tracks *.db with Git LFS
+app.py                        Flask backend: /api/ask, /api/search, /api/years
+static/index.html             single-page frontend (Flask version)
+docs/index.html                static, client-side version served by GitHub Pages
+streamlit_app/app.py           full Python app for Streamlit Community Cloud
+streamlit_app/requirements.txt streamlit, requests, pandas, python-dotenv
+requirements.txt              Flask, requests, gunicorn
+Procfile                      gunicorn entry point for deployment
+.env.example                   template — copy to .env, never commit .env
+.streamlit/secrets.toml.example  template for the Streamlit build — never commit secrets.toml
+.gitignore                    excludes .env, secrets.toml, and *.db (pcards.db is allow-listed back in)
+.gitattributes                 tracks *.db with Git LFS
 ```
 
 ## A note on results
